@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Focus Blocker Control Panel</title>
+</head>
+<body>
+    <h2>Unlock Websites</h2>
+
+    <label for="unlock-time">Unlock Until:</label>
+    <input type="time" id="unlock-time">
+    <button onclick="setUnlockTime()">Unlock</button>
+
+    <script>
+        function setUnlockTime() {
+            let unlockTime = document.getElementById("unlock-time").value;
+            if (!unlockTime) {
+                alert("Please select a valid time.");
+                return;
+            }
+
+            let now = new Date();
+            let unlockDateTime = new Date(now.toDateString() + " " + unlockTime);
+            if (unlockDateTime < now) {
+                alert("Selected time must be in the future.");
+                return;
+            }
+
+            // Save the unlock time
+            fetch("status.json", { method: "POST", body: JSON.stringify({ unlocked: true, until: unlockDateTime.getTime() }) });
+
+            // Auto-relock at the set time
+            let timeUntilLock = unlockDateTime.getTime() - now.getTime();
+            setTimeout(() => {
+                fetch("status.json", { method: "POST", body: JSON.stringify({ unlocked: false }) });
+                alert("Time is up! The sites are locked again.");
+            }, timeUntilLock);
+        }
+    </script>
+</body>
+</html>
