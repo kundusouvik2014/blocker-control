@@ -1,16 +1,38 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Focus Blocker Control Panel</title>
+    <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-database.js"></script>
 </head>
 <body>
-    <h2>Unlock Websites</h2>
+    <h2>Focus Blocker Control Panel</h2>
 
     <label for="unlock-time">Unlock Until:</label>
     <input type="time" id="unlock-time">
     <button onclick="setUnlockTime()">Unlock</button>
 
+    <p id="status-message">Checking unlock status...</p>
+
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgSiIqPb43lIizlDxpPG5EUgXVAYnrN-g",
+            authDomain: "focus-blocker-0.firebaseapp.com",
+            databaseURL: "https://focus-blocker-0-default-rtdb.firebaseio.com",
+            projectId: "focus-blocker-0",
+            storageBucket: "focus-blocker-0.firebasestorage.app",
+            messagingSenderId: "192100704467",
+            appId: "1:192100704467:web:1161882f47ac80626c7426",
+            measurementId: "G-804ECCDB45"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         function setUnlockTime() {
             let unlockTime = document.getElementById("unlock-time").value;
             if (!unlockTime) {
@@ -25,16 +47,36 @@
                 return;
             }
 
-            // Save the unlock time
-            fetch("status.json", { method: "POST", body: JSON.stringify({ unlocked: true, until: unlockDateTime.getTime() }) });
+            db.ref("status").set({
+                unlocked: true,
+                until: unlockDateTime.getTime()
+            });
 
-            // Auto-relock at the set time
+            document.getElementById("status-message").innerText = "YouTube is unlocked until " + unlockTime;
+            
+            // Auto-relock after the set time
             let timeUntilLock = unlockDateTime.getTime() - now.getTime();
             setTimeout(() => {
-                fetch("status.json", { method: "POST", body: JSON.stringify({ unlocked: false }) });
-                alert("Time is up! The sites are locked again.");
+                db.ref("status").set({ unlocked: false });
+                document.getElementById("status-message").innerText = "Time is up! YouTube is locked again.";
             }, timeUntilLock);
         }
+
+        // Check the unlock status and update UI
+        function checkUnlockStatus() {
+            db.ref("status").on("value", (snapshot) => {
+                let data = snapshot.val();
+                let now = new Date().getTime();
+                if (data && data.unlocked && now < data.until) {
+                    let remainingTime = new Date(data.until).toLocaleTimeString();
+                    document.getElementById("status-message").innerText = "YouTube is unlocked until " + remainingTime;
+                } else {
+                    document.getElementById("status-message").innerText = "YouTube is currently locked.";
+                }
+            });
+        }
+
+        checkUnlockStatus();
     </script>
 </body>
 </html>
